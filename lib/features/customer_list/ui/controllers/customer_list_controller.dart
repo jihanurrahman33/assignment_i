@@ -8,30 +8,43 @@ class CustomerListController extends GetxController {
   List<CustomerList>? customerList = [];
   PageInfo? pageInfo;
 
+  int currentPage = 1;
+
   bool _customerDataInProgress = false;
-  bool get custoemrDataInProgress => _customerDataInProgress;
+  bool get customerDataInProgress => _customerDataInProgress;
 
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
-  int currentPage = 1;
+  bool get hasMorePages => currentPage < (pageInfo?.pageCount ?? 1);
 
-  Future<bool> getCustomerListData({required int pageNumber}) async {
+  Future<bool> getCustomerListData({
+    required int pageNumber,
+    bool append = false,
+  }) async {
     final loginToken = await getLoginToken();
     bool isSuccess = false;
+
     _customerDataInProgress = true;
     update();
 
-    Map<String, String> headers = {'Authorization': loginToken ?? ''};
+    final headers = {'Authorization': loginToken ?? ''};
 
     NetworkResponse response = await NetworkClient.getRequest(
-      url: "${Urls.getCustomerList(pageNo: pageNumber)}",
+      url: Urls.getCustomerList(pageNo: pageNumber),
       headers: headers,
     );
 
     if (response.isSucess) {
       final customerListModel = CustomerListModel.fromJson(response.data!);
-      customerList = customerListModel.customerList;
+      final fetchedList = customerListModel.customerList ?? [];
+
+      if (append && customerList != null) {
+        customerList!.addAll(fetchedList);
+      } else {
+        customerList = fetchedList;
+      }
+
       pageInfo = customerListModel.pageInfo;
       currentPage = pageNumber;
       _errorMessage = null;
